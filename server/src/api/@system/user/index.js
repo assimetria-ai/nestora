@@ -18,6 +18,15 @@ const db = require('../../../lib/@system/PostgreSQL')
 const logger = require('../../../lib/@system/Logger')
 const { registerLimiter, passwordResetLimiter } = require('../../../lib/@system/RateLimit')
 const emailService = require('../../../lib/@system/Email')
+const { validate } = require('../../../lib/@system/Validation')
+const {
+  RegisterBody,
+  UpdateProfileBody,
+  ChangePasswordBody,
+  PasswordResetRequestBody,
+  PasswordResetBody,
+  VerifyEmailBody,
+} = require('../../../lib/@system/Validation/schemas/@system/user')
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -39,10 +48,9 @@ async function createEmailVerificationToken(userId) {
 // ── Register ──────────────────────────────────────────────────────────────
 
 // POST /api/users — register
-router.post('/users', registerLimiter, async (req, res, next) => {
+router.post('/users', registerLimiter, validate({ body: RegisterBody }), async (req, res, next) => {
   try {
     const { email, password, name } = req.body
-    if (!email || !password) return res.status(400).json({ message: 'Email and password required' })
     const pwCheck = validatePassword(password)
     if (!pwCheck.valid) return res.status(400).json({ message: pwCheck.message })
 
@@ -77,12 +85,9 @@ router.get('/users/me', authenticate, (req, res) => {
 })
 
 // PATCH /api/users/me — update profile (name only; email requires verification)
-router.patch('/users/me', authenticate, async (req, res, next) => {
+router.patch('/users/me', authenticate, validate({ body: UpdateProfileBody }), async (req, res, next) => {
   try {
     const { name } = req.body
-    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
-      return res.status(400).json({ message: 'Name must be a non-empty string' })
-    }
     const updated = await UserRepo.update(req.user.id, { name: name?.trim() })
     res.json({ user: updated })
   } catch (err) {
@@ -91,12 +96,9 @@ router.patch('/users/me', authenticate, async (req, res, next) => {
 })
 
 // POST /api/users/me/password — change password (must supply current password)
-router.post('/users/me/password', authenticate, async (req, res, next) => {
+router.post('/users/me/password', authenticate, validate({ body: ChangePasswordBody }), async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: 'currentPassword and newPassword are required' })
-    }
     const pwCheck = validatePassword(newPassword)
     if (!pwCheck.valid) return res.status(400).json({ message: pwCheck.message })
 
@@ -133,10 +135,9 @@ router.post('/users/email/verify/request', authenticate, async (req, res, next) 
 })
 
 // POST /api/users/email/verify — verify email using the token from the email link
-router.post('/users/email/verify', async (req, res, next) => {
+router.post('/users/email/verify', validate({ body: VerifyEmailBody }), async (req, res, next) => {
   try {
     const { token } = req.body
-    if (!token) return res.status(400).json({ message: 'token is required' })
 
     const record = await db.oneOrNone(
       `SELECT * FROM email_verification_tokens
@@ -164,10 +165,9 @@ router.post('/users/email/verify', async (req, res, next) => {
 
 // POST /api/users/password/request — generate a reset token and (conceptually) send an email
 // @custom — wire up SES / Resend / SendGrid to actually send the email
-router.post('/users/password/request', passwordResetLimiter, async (req, res, next) => {
+router.post('/users/password/request', passwordResetLimiter, validate({ body: PasswordResetRequestBody }), async (req, res, next) => {
   try {
     const { email } = req.body
-    if (!email) return res.status(400).json({ message: 'Email is required' })
 
     // Always respond 200 to avoid user enumeration
     res.json({ message: 'If this email exists, a reset link has been sent.' })
@@ -198,10 +198,9 @@ router.post('/users/password/request', passwordResetLimiter, async (req, res, ne
 })
 
 // POST /api/users/password/reset — complete reset using token
-router.post('/users/password/reset', passwordResetLimiter, async (req, res, next) => {
+router.post('/users/password/reset', passwordResetLimiter, validate({ body: PasswordResetBody }), async (req, res, next) => {
   try {
     const { token, password } = req.body
-    if (!token || !password) return res.status(400).json({ message: 'token and password are required' })
     const pwCheck = validatePassword(password)
     if (!pwCheck.valid) return res.status(400).json({ message: pwCheck.message })
 

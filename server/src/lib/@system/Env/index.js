@@ -64,13 +64,16 @@ const SCHEMA = [
     description: 'Redis connection URL  e.g. redis://localhost:6379',
   },
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // ── Auth (RS256 asymmetric key pair) ─────────────────────────────────────
   {
-    key: 'JWT_SECRET',
+    key: 'JWT_PRIVATE_KEY',
     required: true,
-    minLength: 32,
-    warnInProd: 'change-me',
-    description: 'Secret used to sign JWT tokens — must be at least 32 characters',
+    description: 'RSA private key PEM (with \\n line endings) — used to sign JWT tokens',
+  },
+  {
+    key: 'JWT_PUBLIC_KEY',
+    required: true,
+    description: 'RSA public key PEM (with \\n line endings) — used to verify JWT tokens',
   },
 
   // ── App ───────────────────────────────────────────────────────────────────

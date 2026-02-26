@@ -7,6 +7,8 @@ const router = express.Router()
 const crypto = require('crypto')
 const { authenticate } = require('../../../lib/@system/Helpers/auth')
 const ApiKeyRepo = require('../../../db/repos/@system/ApiKeyRepo')
+const { validate } = require('../../../lib/@system/Validation')
+const { CreateApiKeyBody, DeleteApiKeyParams } = require('../../../lib/@system/Validation/schemas/@system/api-keys')
 
 const KEY_PREFIX = 'sk_'
 const KEY_BYTES = 32 // 256 bits → 64 hex chars
@@ -31,12 +33,9 @@ router.get('/api-keys', authenticate, async (req, res, next) => {
 })
 
 // POST /api/api-keys — create
-router.post('/api-keys', authenticate, async (req, res, next) => {
+router.post('/api-keys', authenticate, validate({ body: CreateApiKeyBody }), async (req, res, next) => {
   try {
     const { name, expiresAt } = req.body
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return res.status(400).json({ message: 'name is required' })
-    }
 
     const raw = generateApiKey()
     const keyHash = hashKey(raw)
@@ -58,10 +57,9 @@ router.post('/api-keys', authenticate, async (req, res, next) => {
 })
 
 // DELETE /api/api-keys/:id — revoke
-router.delete('/api-keys/:id', authenticate, async (req, res, next) => {
+router.delete('/api-keys/:id', authenticate, validate({ params: DeleteApiKeyParams }), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10)
-    if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' })
+    const id = req.params.id
 
     const deleted = await ApiKeyRepo.deleteById(id, req.user.id)
     if (!deleted) return res.status(404).json({ message: 'API key not found' })

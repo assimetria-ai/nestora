@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "build:railway": "cd client && npm install && npm run build && cp -r dist ../server/public && cd ../server && npm install",
-    "start:railway": "node server/src/index.js"
+    "start:railway": "node server/src/index.js",
+    "generate-keys": "node scripts/@system/dev/generate-keys.js"
+  },
+  "dependencies": {
+    "node-forge": "^1.3.1"
   }
 }

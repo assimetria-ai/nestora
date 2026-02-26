@@ -13,6 +13,8 @@ const logger = require('../../../lib/@system/Logger')
 const OTPAuth = require('otpauth')
 const QRCode = require('qrcode')
 const bcrypt = require('bcryptjs')
+const { validate } = require('../../../lib/@system/Validation')
+const { EnableTotpBody, DisableTotpBody } = require('../../../lib/@system/Validation/schemas/@system/totp')
 
 const APP_NAME = process.env.APP_NAME ?? 'ProductTemplate'
 
@@ -100,10 +102,9 @@ router.post('/users/me/2fa/setup', authenticate, async (req, res, next) => {
 
 // ─── POST /api/users/me/2fa/enable ───────────────────────────────────────────
 
-router.post('/users/me/2fa/enable', authenticate, async (req, res, next) => {
+router.post('/users/me/2fa/enable', authenticate, validate({ body: EnableTotpBody }), async (req, res, next) => {
   try {
     const { code } = req.body
-    if (!code) return res.status(400).json({ message: '`code` is required' })
 
     const pending = await db.oneOrNone(
       `SELECT * FROM totp_pending_secrets
@@ -114,7 +115,7 @@ router.post('/users/me/2fa/enable', authenticate, async (req, res, next) => {
       return res.status(400).json({ message: 'No pending 2FA setup found. Call /setup first.' })
     }
 
-    if (!verifyCode(pending.secret, String(code).replace(/\s/g, ''))) {
+    if (!verifyCode(pending.secret, code)) {
       return res.status(400).json({ message: 'Invalid or expired TOTP code' })
     }
 
@@ -135,7 +136,7 @@ router.post('/users/me/2fa/enable', authenticate, async (req, res, next) => {
 
 // ─── POST /api/users/me/2fa/disable ──────────────────────────────────────────
 
-router.post('/users/me/2fa/disable', authenticate, async (req, res, next) => {
+router.post('/users/me/2fa/disable', authenticate, validate({ body: DisableTotpBody }), async (req, res, next) => {
   try {
     const { code, password } = req.body
 
@@ -148,7 +149,7 @@ router.post('/users/me/2fa/disable', authenticate, async (req, res, next) => {
     let verified = false
 
     if (code) {
-      verified = verifyCode(user.totp_secret, String(code).replace(/\s/g, ''))
+      verified = verifyCode(user.totp_secret, code)
     } else if (password) {
       verified = await bcrypt.compare(password, user.password_hash)
     }

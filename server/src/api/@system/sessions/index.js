@@ -16,6 +16,8 @@ const { signAccessTokenAsync, verifyTokenAsync } = require('../../../lib/@system
 const bcrypt = require('bcryptjs')
 const { client: redis, isReady: redisReady } = require('../../../lib/@system/Redis')
 const { loginLimiter } = require('../../../lib/@system/RateLimit')
+const { validate } = require('../../../lib/@system/Validation')
+const { LoginBody, DeleteSessionParams } = require('../../../lib/@system/Validation/schemas/@system/sessions')
 const {
   MAX_ATTEMPTS,
   getLockoutSecondsRemaining,
@@ -93,10 +95,9 @@ function clearAuthCookies(res) {
 // ── Routes ─────────────────────────────────────────────────────────────────
 
 // POST /api/sessions — login
-router.post('/sessions', loginLimiter, async (req, res, next) => {
+router.post('/sessions', loginLimiter, validate({ body: LoginBody }), async (req, res, next) => {
   try {
     const { email, password } = req.body
-    if (!email || !password) return res.status(400).json({ message: 'Email and password required' })
 
     const normalizedEmail = email.toLowerCase()
 
@@ -267,10 +268,9 @@ router.get('/sessions', authenticate, async (req, res, next) => {
 })
 
 // DELETE /api/sessions/:id — revoke a specific session by ID
-router.delete('/sessions/:id', authenticate, async (req, res, next) => {
+router.delete('/sessions/:id', authenticate, validate({ params: DeleteSessionParams }), async (req, res, next) => {
   try {
-    const sessionId = parseInt(req.params.id, 10)
-    if (isNaN(sessionId)) return res.status(400).json({ message: 'Invalid session ID' })
+    const sessionId = req.params.id
 
     // Revoke in sessions table and get back the token_hash to revoke the refresh token too
     const revoked = await SessionRepo.revoke(sessionId, req.user.id)

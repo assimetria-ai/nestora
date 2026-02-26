@@ -70,4 +70,4 @@ ENV NODE_ENV=production \
 EXPOSE 4000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "server/src/index.js"]
+CMD ["sh", "-c", "node server/src/db/migrations/@system/run.js && node server/src/index.js"]

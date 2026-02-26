@@ -3,6 +3,8 @@ const express = require('express')
 const router = express.Router()
 const { authenticate } = require('../../../lib/@system/Helpers/auth')
 const BrandRepo = require('../../../db/repos/@custom/BrandRepo')
+const { validate } = require('../../../lib/@system/Validation')
+const { CreateBrandBody, UpdateBrandBody, UploadLogoBody, BrandIdParams, PaginationQuery } = require('../../../lib/@system/Validation/schemas/@custom/brands')
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -51,19 +53,9 @@ router.get('/brands/:id', authenticate, async (req, res, next) => {
 
 // ─── POST /api/brands ────────────────────────────────────────────────────────
 // Create a new brand
-router.post('/brands', authenticate, async (req, res, next) => {
+router.post('/brands', authenticate, validate({ body: CreateBrandBody }), async (req, res, next) => {
   try {
     const { name, description, website_url, primary_color, secondary_color } = req.body
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return res.status(400).json({ message: 'name is required' })
-    }
-    if (primary_color && !isValidHex(primary_color)) {
-      return res.status(400).json({ message: 'primary_color must be a valid hex color (e.g. #FF5733)' })
-    }
-    if (secondary_color && !isValidHex(secondary_color)) {
-      return res.status(400).json({ message: 'secondary_color must be a valid hex color (e.g. #FF5733)' })
-    }
 
     const slug = slugify(name.trim())
     const existing = await BrandRepo.findBySlug(slug)
@@ -86,7 +78,7 @@ router.post('/brands', authenticate, async (req, res, next) => {
 
 // ─── PATCH /api/brands/:id ───────────────────────────────────────────────────
 // Update brand settings (name, colors, website)
-router.patch('/brands/:id', authenticate, async (req, res, next) => {
+router.patch('/brands/:id', authenticate, validate({ params: BrandIdParams, body: UpdateBrandBody }), async (req, res, next) => {
   try {
     const brand = await BrandRepo.findById(req.params.id)
     if (!brand) return res.status(404).json({ message: 'Brand not found' })
@@ -95,16 +87,6 @@ router.patch('/brands/:id', authenticate, async (req, res, next) => {
     }
 
     const { name, description, website_url, primary_color, secondary_color, status } = req.body
-
-    if (primary_color !== undefined && primary_color !== null && !isValidHex(primary_color)) {
-      return res.status(400).json({ message: 'primary_color must be a valid hex color (e.g. #FF5733)' })
-    }
-    if (secondary_color !== undefined && secondary_color !== null && !isValidHex(secondary_color)) {
-      return res.status(400).json({ message: 'secondary_color must be a valid hex color (e.g. #FF5733)' })
-    }
-    if (status && !['active', 'inactive', 'archived'].includes(status)) {
-      return res.status(400).json({ message: 'status must be one of: active, inactive, archived' })
-    }
 
     const updated = await BrandRepo.update(brand.id, {
       name: name ?? null,
@@ -122,7 +104,7 @@ router.patch('/brands/:id', authenticate, async (req, res, next) => {
 
 // ─── POST /api/brands/:id/logo ───────────────────────────────────────────────
 // Upload logo as base64 data URL (stored in logo_url column)
-router.post('/brands/:id/logo', authenticate, async (req, res, next) => {
+router.post('/brands/:id/logo', authenticate, validate({ params: BrandIdParams, body: UploadLogoBody }), async (req, res, next) => {
   try {
     const brand = await BrandRepo.findById(req.params.id)
     if (!brand) return res.status(404).json({ message: 'Brand not found' })
@@ -131,14 +113,6 @@ router.post('/brands/:id/logo', authenticate, async (req, res, next) => {
     }
 
     const { logo } = req.body
-    if (!logo) return res.status(400).json({ message: 'logo field (base64 data URL) is required' })
-    if (!isValidLogoDataUrl(logo)) {
-      return res.status(400).json({ message: 'logo must be a valid image data URL (png, jpeg, gif, webp, svg)' })
-    }
-    // Rough size check: base64 data expands ~33%, keep under 1.5MB stored
-    if (logo.length > 2_100_000) {
-      return res.status(400).json({ message: 'Logo file too large. Maximum size is ~1.5 MB.' })
-    }
 
     const updated = await BrandRepo.update(brand.id, { logo_url: logo })
     res.json({ brand: updated })
@@ -185,9 +159,9 @@ router.delete('/brands/:id', authenticate, async (req, res, next) => {
 })
 
 // ─── GET /api/brands/deleted — list soft-deleted brands ─────────────────────
-router.get('/brands/deleted', authenticate, async (req, res, next) => {
+router.get('/brands/deleted', authenticate, validate({ query: PaginationQuery }), async (req, res, next) => {
   try {
-    const { limit = 50, offset = 0 } = req.query
+    const { limit, offset } = req.query
     const brands = await BrandRepo.findDeleted({
       user_id: req.user.role === 'admin' ? undefined : req.user.id,
       limit: parseInt(limit, 10),

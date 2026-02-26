@@ -13,6 +13,8 @@ const { authenticate } = require('../../../lib/@system/Helpers/auth')
 const S3 = require('../../../lib/@system/AWS/S3')
 const FileUploadRepo = require('../../../db/repos/@custom/FileUploadRepo')
 const logger = require('../../../lib/@system/Logger')
+const { validate } = require('../../../lib/@system/Validation')
+const { PresignBody, FileIdParams, ConfirmUploadBody } = require('../../../lib/@system/Validation/schemas/@custom/storage')
 
 // ── Allowed MIME types (restrict to safe set) ─────────────────────────────────
 
@@ -50,27 +52,12 @@ const MAX_SIZE_BYTES = 100 * 1024 * 1024 // 100 MB
  * Response:
  *   { file_id, upload_url, key, bucket, expires_at, public_url }
  */
-router.post('/storage/presign', authenticate, async (req, res, next) => {
+router.post('/storage/presign', authenticate, validate({ body: PresignBody }), async (req, res, next) => {
   try {
     const { filename, content_type, size, folder } = req.body
 
-    if (!filename || typeof filename !== 'string' || !filename.trim()) {
-      return res.status(400).json({ message: 'filename is required' })
-    }
-    if (!content_type || typeof content_type !== 'string') {
-      return res.status(400).json({ message: 'content_type is required' })
-    }
-
     const cleanFilename = filename.trim().replace(/[^a-zA-Z0-9._-]/g, '_')
-    const mimeType = content_type.toLowerCase().trim()
-
-    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
-      return res.status(415).json({ message: `Unsupported content type: ${mimeType}` })
-    }
-
-    if (size !== undefined && (typeof size !== 'number' || size > MAX_SIZE_BYTES)) {
-      return res.status(413).json({ message: `File size exceeds maximum of ${MAX_SIZE_BYTES / (1024 * 1024)} MB` })
-    }
+    const mimeType = content_type
 
     const { url, key, bucket, expiresAt } = await S3.createPresignedPutUrl({
       filename: cleanFilename,
@@ -113,10 +100,9 @@ router.post('/storage/presign', authenticate, async (req, res, next) => {
  *   size_bytes {number} — actual file size after upload
  *   verify     {boolean} — check S3 existence before confirming (default: false)
  */
-router.patch('/storage/:fileId/confirm', authenticate, async (req, res, next) => {
+router.patch('/storage/:fileId/confirm', authenticate, validate({ params: FileIdParams, body: ConfirmUploadBody }), async (req, res, next) => {
   try {
-    const fileId = parseInt(req.params.fileId, 10)
-    if (!fileId) return res.status(400).json({ message: 'Invalid file ID' })
+    const fileId = req.params.fileId
 
     const record = await FileUploadRepo.findById(fileId)
     if (!record) return res.status(404).json({ message: 'File not found' })
@@ -148,10 +134,9 @@ router.patch('/storage/:fileId/confirm', authenticate, async (req, res, next) =>
 
 // ── GET /api/storage/:fileId ──────────────────────────────────────────────────
 
-router.get('/storage/:fileId', authenticate, async (req, res, next) => {
+router.get('/storage/:fileId', authenticate, validate({ params: FileIdParams }), async (req, res, next) => {
   try {
-    const fileId = parseInt(req.params.fileId, 10)
-    if (!fileId) return res.status(400).json({ message: 'Invalid file ID' })
+    const fileId = req.params.fileId
 
     const record = await FileUploadRepo.findById(fileId)
     if (!record) return res.status(404).json({ message: 'File not found' })
@@ -172,10 +157,9 @@ router.get('/storage/:fileId', authenticate, async (req, res, next) => {
 
 // ── DELETE /api/storage/:fileId — soft delete ─────────────────────────────────
 
-router.delete('/storage/:fileId', authenticate, async (req, res, next) => {
+router.delete('/storage/:fileId', authenticate, validate({ params: FileIdParams }), async (req, res, next) => {
   try {
-    const fileId = parseInt(req.params.fileId, 10)
-    if (!fileId) return res.status(400).json({ message: 'Invalid file ID' })
+    const fileId = req.params.fileId
 
     const record = await FileUploadRepo.findById(fileId)
     if (!record) return res.status(404).json({ message: 'File not found' })
@@ -194,10 +178,9 @@ router.delete('/storage/:fileId', authenticate, async (req, res, next) => {
 
 // ── POST /api/storage/:fileId/restore — restore soft-deleted file ─────────────
 
-router.post('/storage/:fileId/restore', authenticate, async (req, res, next) => {
+router.post('/storage/:fileId/restore', authenticate, validate({ params: FileIdParams }), async (req, res, next) => {
   try {
-    const fileId = parseInt(req.params.fileId, 10)
-    if (!fileId) return res.status(400).json({ message: 'Invalid file ID' })
+    const fileId = req.params.fileId
 
     const record = await FileUploadRepo.findByIdIncludingDeleted(fileId)
     if (!record) return res.status(404).json({ message: 'File not found' })

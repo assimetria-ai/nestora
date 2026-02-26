@@ -1,7 +1,24 @@
 const jwt = require('jsonwebtoken')
 const { promisify } = require('util')
 
-const SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-me'
+const ALGORITHM = 'RS256'
+
+// Keys are stored as PEM strings in env vars (with literal \n sequences)
+// e.g. JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----"
+function parsePemKey(raw) {
+  if (!raw) return null
+  return raw.replace(/\\n/g, '\n')
+}
+
+const PRIVATE_KEY = parsePemKey(process.env.JWT_PRIVATE_KEY)
+const PUBLIC_KEY = parsePemKey(process.env.JWT_PUBLIC_KEY)
+
+if (!PRIVATE_KEY || !PUBLIC_KEY) {
+  console.warn(
+    '[jwt] JWT_PRIVATE_KEY or JWT_PUBLIC_KEY env var not set — ' +
+    'token operations will fail. Generate keys with: openssl genrsa 2048 > private.pem && openssl rsa -in private.pem -pubout > public.pem'
+  )
+}
 
 // Promisified versions of the jsonwebtoken callback API
 const _signAsync = promisify(jwt.sign)
@@ -11,19 +28,19 @@ const _verifyAsync = promisify(jwt.verify)
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL ?? '15m'
 
 function signToken(payload, options = {}) {
-  return jwt.sign(payload, SECRET, { expiresIn: ACCESS_TOKEN_TTL, ...options })
+  return jwt.sign(payload, PRIVATE_KEY, { algorithm: ALGORITHM, expiresIn: ACCESS_TOKEN_TTL, ...options })
 }
 
 function verifyToken(token) {
-  return jwt.verify(token, SECRET)
+  return jwt.verify(token, PUBLIC_KEY, { algorithms: [ALGORITHM] })
 }
 
 async function signTokenAsync(payload, options = {}) {
-  return _signAsync(payload, SECRET, { expiresIn: ACCESS_TOKEN_TTL, ...options })
+  return _signAsync(payload, PRIVATE_KEY, { algorithm: ALGORITHM, expiresIn: ACCESS_TOKEN_TTL, ...options })
 }
 
 async function verifyTokenAsync(token) {
-  return _verifyAsync(token, SECRET)
+  return _verifyAsync(token, PUBLIC_KEY, { algorithms: [ALGORITHM] })
 }
 
 // Convenience aliases — semantically clearer when used alongside refresh tokens

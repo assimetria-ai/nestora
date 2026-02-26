@@ -1,8 +1,19 @@
-process.env.JWT_SECRET = 'test-secret'
+const crypto = require('crypto')
+
+// Generate a fresh RS256 key pair for each test run
+const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: 'spki', format: 'pem' },
+  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+})
+
+// Store as escaped env vars (matching the parsePemKey format in jwt.js)
+process.env.JWT_PRIVATE_KEY = privateKey.replace(/\n/g, '\\n')
+process.env.JWT_PUBLIC_KEY = publicKey.replace(/\n/g, '\\n')
 
 const { signToken, verifyToken, signTokenAsync, verifyTokenAsync } = require('../../../src/lib/@system/Helpers/jwt')
 
-describe('JWT helpers', () => {
+describe('JWT helpers (RS256)', () => {
   const payload = { userId: 42 }
 
   describe('signToken / verifyToken (sync)', () => {

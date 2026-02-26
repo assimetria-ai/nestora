@@ -7,6 +7,8 @@ const router = express.Router()
 const { authenticate } = require('../../../lib/@system/Helpers/auth')
 const db = require('../../../lib/@system/PostgreSQL')
 const logger = require('../../../lib/@system/Logger')
+const { validate } = require('../../../lib/@system/Validation')
+const { CompleteOnboardingBody } = require('../../../lib/@system/Validation/schemas/@system/onboarding')
 
 // GET /api/onboarding — return whether the current user has completed onboarding
 router.get('/onboarding', authenticate, async (req, res, next) => {
@@ -26,7 +28,7 @@ router.get('/onboarding', authenticate, async (req, res, next) => {
 
 // POST /api/onboarding/complete — mark onboarding as done, optionally save profile data
 // Body: { name?: string, useCase?: string, referralSource?: string }
-router.post('/onboarding/complete', authenticate, async (req, res, next) => {
+router.post('/onboarding/complete', authenticate, validate({ body: CompleteOnboardingBody }), async (req, res, next) => {
   try {
     const { name, useCase, referralSource } = req.body
 
