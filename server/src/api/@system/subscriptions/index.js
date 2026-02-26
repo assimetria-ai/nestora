@@ -28,7 +28,12 @@ router.get('/subscriptions/me/all', authenticate, async (req, res, next) => {
 // GET /api/subscriptions/plans — fetch active prices from Stripe (public)
 // Products/prices are configured in Stripe dashboard; this endpoint fetches them live.
 // Products must have metadata.featured = 'true' to be listed, and prices need metadata.order for sorting.
+// Returns an empty list when STRIPE_SECRET_KEY is not configured (instead of propagating the auth error).
 router.get('/subscriptions/plans', async (req, res, next) => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return res.json({ plans: [] })
+  }
+
   try {
     const prices = await stripe.prices.list({
       active: true,

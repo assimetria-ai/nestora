@@ -117,7 +117,7 @@ We're currently working on passkey (WebAuthn) support and will write a follow-up
     slug: 'design-system-v2',
     title: 'Introducing our design system v2',
     excerpt:
-      'We rebuilt our component library from scratch. Here's what changed, why we did it, and how it makes building faster.',
+      `We rebuilt our component library from scratch. Here's what changed, why we did it, and how it makes building faster.`,
     category: 'Design',
     author: 'Design Team',
     publishedAt: '2024-03-12',
@@ -136,7 +136,7 @@ The original system grew organically. Over time it accumulated inconsistencies: 
 
 - **Tokens over magic numbers** — all colours, spacing, and typography are now CSS custom properties sourced from a single token file
 - **Accessible by default** — every interactive component ships with proper ARIA attributes and passes WCAG AA contrast requirements
-- **Dark mode** — first-class support via the CSS `prefers-color-scheme` media query and a manual toggle
+- **Dark mode** — first-class support via the CSS \`prefers-color-scheme\` media query and a manual toggle
 
 ### The result
 
@@ -148,7 +148,7 @@ Component count dropped from 94 to 61. Build times are faster. And our designers
     slug: 'shipping-faster-with-feature-flags',
     title: 'Shipping faster with feature flags',
     excerpt:
-      'Feature flags let us decouple deployment from release. Here's how we use them to ship more confidently.',
+      `Feature flags let us decouple deployment from release. Here's how we use them to ship more confidently.`,
     category: 'Engineering',
     author: 'Engineering Team',
     publishedAt: '2024-04-20',
@@ -183,7 +183,7 @@ Flags are powerful but they add cognitive overhead. We enforce a policy: every f
     slug: 'product-update-q1-2024',
     title: 'Product update: Q1 2024',
     excerpt:
-      'A roundup of everything we shipped in the first quarter — new integrations, performance improvements, and a sneak peek at what's coming in Q2.',
+      `A roundup of everything we shipped in the first quarter — new integrations, performance improvements, and a sneak peek at what's coming in Q2.`,
     category: 'Product',
     author: 'Product Team',
     publishedAt: '2024-04-01',
