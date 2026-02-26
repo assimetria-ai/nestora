@@ -31,7 +31,7 @@ const db = require('../../../lib/@system/PostgreSQL')
 const MIGRATIONS_TABLE = 'schema_migrations'
 
 // Files inside this runner's own directory that are not migration modules
-const EXCLUDED_FILES = new Set(['run.js', 'index.js', 'create.js', 'precheck.js'])
+const EXCLUDED_FILES = new Set(['run.js', 'index.js', 'create.js', 'precheck.js', 'start.js'])
 
 // Directories to scan for migration files, in resolution order
 const MIGRATION_DIRS = [
