@@ -47,9 +47,12 @@ const connectionConfig = {
   // Throw an error if a client cannot be acquired within this period.
   connectionTimeoutMillis: POOL_CONNECTION_TIMEOUT,
 
-  // Require SSL in production. Set DB_POOL_SSL=false to override.
+  // Require SSL in production with full certificate verification. Set DB_POOL_SSL=false to override.
+  // If a custom CA bundle is needed (e.g. self-signed / private CA), set DB_SSL_CA to the file path.
   ssl: process.env.NODE_ENV === 'production' && process.env.DB_POOL_SSL !== 'false'
-    ? { rejectUnauthorized: false }
+    ? process.env.DB_SSL_CA
+      ? { ca: require('fs').readFileSync(process.env.DB_SSL_CA) }
+      : true
     : undefined,
 }
 
