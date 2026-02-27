@@ -7,8 +7,11 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean)
 
 function isOriginAllowed(origin) {
-  // Allow requests with no origin (e.g. curl, mobile apps, same-origin)
-  if (!origin) return true
+  // In production, deny requests with no Origin header (blocks server-to-server CORS bypass).
+  // In development, allow no-origin for curl, Postman, and local tooling convenience.
+  if (!origin) {
+    return process.env.NODE_ENV !== 'production'
+  }
 
   // Exact match
   if (ALLOWED_ORIGINS.includes(origin)) return true
