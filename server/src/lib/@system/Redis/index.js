@@ -1,23 +1,30 @@
-const Redis = require('ioredis')
 const logger = require('../Logger')
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
+const REDIS_URL = process.env.REDIS_URL
 
-const client = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  lazyConnect: true,
-})
+let client = null
 
-client.on('connect', () => logger.info('Redis connected'))
-client.on('error', (err) => logger.error({ err }, 'Redis error'))
-client.on('close', () => logger.warn('Redis connection closed'))
+if (REDIS_URL) {
+  const Redis = require('ioredis')
+  client = new Redis(REDIS_URL, {
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: true,
+    lazyConnect: true,
+  })
+
+  client.on('connect', () => logger.info('Redis connected'))
+  client.on('error', (err) => logger.error({ err }, 'Redis error'))
+  client.on('close', () => logger.warn('Redis connection closed'))
+} else {
+  logger.info('REDIS_URL not set — running without Redis')
+}
 
 /**
  * Connect eagerly. Called from index.js at startup.
- * Resolves even if Redis is unavailable — app continues degraded.
+ * No-op when REDIS_URL is not configured.
  */
 async function connect() {
+  if (!client) return
   try {
     await client.connect()
   } catch (err) {
@@ -27,7 +34,7 @@ async function connect() {
 
 /** True once the client has successfully connected at least once */
 function isReady() {
-  return client.status === 'ready'
+  return client != null && client.status === 'ready'
 }
 
 module.exports = { client, connect, isReady }
