@@ -4,7 +4,7 @@
  * preferences, last_login_at, is_active).
  */
 
-const db = require('../../../lib/@system/PostgreSQL')
+const db = require('../../lib/@system/PostgreSQL')
 const SystemUserRepo = require('../@system/UserRepo')
 
 const UserRepo = {
@@ -45,7 +45,7 @@ const UserRepo = {
     )
   },
 
-  // ── Deactivate / activate (is_active flag) ─────────────────────────────────
+  // ── Soft-delete (deactivate) ────────────────────────────────────────────────
   async deactivate(id) {
     return db.oneOrNone(
       `UPDATE users SET is_active = false, updated_at = now() WHERE id = $1 RETURNING id, email, is_active`,
@@ -60,42 +60,12 @@ const UserRepo = {
     )
   },
 
-  // ── Soft delete (deleted_at) ────────────────────────────────────────────────
-  async softDelete(id) {
-    return db.oneOrNone(
-      `UPDATE users SET deleted_at = now(), is_active = false, updated_at = now()
-       WHERE id = $1 AND deleted_at IS NULL
-       RETURNING id, email, deleted_at`,
-      [id],
-    )
-  },
-
-  async restore(id) {
-    return db.oneOrNone(
-      `UPDATE users SET deleted_at = NULL, is_active = true, updated_at = now()
-       WHERE id = $1 AND deleted_at IS NOT NULL
-       RETURNING id, email, deleted_at`,
-      [id],
-    )
-  },
-
-  async findDeleted({ limit = 50, offset = 0 } = {}) {
-    return db.any(
-      `SELECT id, email, name, role, created_at, deleted_at
-       FROM users
-       WHERE deleted_at IS NOT NULL
-       ORDER BY deleted_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset],
-    )
-  },
-
   // ── List active users only ──────────────────────────────────────────────────
   async findAllActive({ limit = 50, offset = 0 } = {}) {
     return db.any(
       `SELECT id, email, name, role, avatar_url, bio, preferences, last_login_at, created_at
        FROM users
-       WHERE is_active = true AND deleted_at IS NULL
+       WHERE is_active = true
        ORDER BY created_at DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset],

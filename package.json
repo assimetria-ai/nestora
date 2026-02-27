@@ -1,13 +1,25 @@
 {
-  "name": "product-template",
+  "name": "nestora",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build:railway": "cd client && npm install && npm run build && cp -r dist ../server/public && cd ../server && npm install",
     "start:railway": "node server/src/index.js",
-    "generate-keys": "node scripts/@system/dev/generate-keys.js"
+    "generate-keys": "node scripts/@system/dev/generate-keys.js",
+    "test": "npm run test:unit && npm run test:api && npm run test:e2e",
+    "test:unit": "cd server && npm test -- --testPathPattern=test/unit",
+    "test:api": "cd server && npm test -- --testPathPattern=test/api",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:report": "npx playwright show-report",
+    "test:client": "cd client && npm run test:run",
+    "test:coverage": "cd client && npm run test:coverage"
   },
   "dependencies": {
     "node-forge": "^1.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
   }
 }

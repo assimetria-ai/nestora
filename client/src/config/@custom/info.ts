@@ -1,12 +1,9 @@
-// @custom — product-specific config override
-// Override any values from @system/info.ts here.
-// This file is NEVER overwritten during template sync.
-
+// @custom — Nestora product config
 import type { info as SystemInfo } from '../@system/info'
 
 export const customInfo: Partial<typeof SystemInfo> = {
-  // name: 'MyProduct',
-  // tagline: 'The best product for your workflow',
-  // url: 'https://myproduct.com',
-  // supportEmail: 'support@myproduct.com',
+  name: 'Nestora',
+  tagline: 'Find your somewhere.',
+  url: import.meta.env.VITE_APP_URL ?? 'https://nestora.com',
+  supportEmail: 'support@nestora.com',
 }

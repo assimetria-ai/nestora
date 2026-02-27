@@ -6,7 +6,7 @@ import { apiRequest } from './utils'
 // ─── Auth / User ────────────────────────────────────────────────────────────
 
 export const register = (data: { name: string; email: string; password: string }) =>
-  apiRequest.post('/users/register', data)
+  apiRequest.post('/users', data)
 
 export const login = (data: { email: string; password: string }) =>
   apiRequest.post<{ bearerToken: string; id: number }>('/users/login', data)

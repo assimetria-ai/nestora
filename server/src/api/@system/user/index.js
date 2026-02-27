@@ -237,8 +237,8 @@ router.post('/users/password/reset', passwordResetLimiter, validate({ body: Pass
 
 // ── Email Notification Preferences ───────────────────────────────────────────
 
-const NOTIFICATION_KEYS = ['security', 'billing', 'activity', 'marketing']
-const DEFAULT_NOTIFICATIONS = { security: true, billing: true, activity: false, marketing: false }
+const NOTIFICATION_KEYS = ['security', 'billing', 'activity', 'marketing', 'inApp', 'weeklyDigest', 'mentions']
+const DEFAULT_NOTIFICATIONS = { security: true, billing: true, activity: false, marketing: false, inApp: true, weeklyDigest: false, mentions: true }
 
 // GET /api/users/me/notifications — get current notification preferences
 router.get('/users/me/notifications', authenticate, async (req, res, next) => {

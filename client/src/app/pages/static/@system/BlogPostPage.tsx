@@ -1,6 +1,6 @@
 // @system — Individual blog post page with markdown-style rendering
-// @custom — wire up to a real CMS or API by replacing the BLOG_POSTS import
-import { useMemo } from 'react'
+// @custom — loads from /api/blog/:slug (DB-backed) with static fallback
+import { useMemo, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   Clock,
@@ -176,10 +176,80 @@ function RelatedPosts({ current }: { current: BlogPost }) {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
+interface ApiPostDetail {
+  id: number
+  slug: string
+  title: string
+  excerpt: string | null
+  content: string
+  category: string
+  author: string
+  tags: string[] | null
+  reading_time: number
+  published_at: string | null
+  created_at: string
+}
+
+function apiPostToBlogPost(p: ApiPostDetail): BlogPost {
+  return {
+    id: String(p.id),
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt ?? '',
+    content: p.content,
+    category: p.category,
+    author: p.author,
+    publishedAt: p.published_at ?? p.created_at,
+    readingTime: p.reading_time,
+    tags: p.tags ?? [],
+  }
+}
+
 export function BlogPostPage() {
   const { slug } = useParams<{ slug: string }>()
 
-  const post = useMemo(() => BLOG_POSTS.find((p) => p.slug === slug), [slug])
+  const staticPost = useMemo(() => BLOG_POSTS.find((p) => p.slug === slug), [slug])
+  const [apiPost, setApiPost] = useState<BlogPost | null | 'not-found'>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!slug) { setLoading(false); return }
+    fetch(`/api/blog/${slug}`)
+      .then((r) => {
+        if (r.status === 404) { setApiPost('not-found'); return null }
+        if (!r.ok) throw new Error()
+        return r.json()
+      })
+      .then((data: { post: ApiPostDetail } | null) => {
+        if (data) setApiPost(apiPostToBlogPost(data.post))
+      })
+      .catch(() => {
+        // Fall back to static data
+      })
+      .finally(() => setLoading(false))
+  }, [slug])
+
+  // Determine which post to display:
+  // - If API returned 'not-found' and no static match → 404
+  // - If API returned a post → use it
+  // - If API unavailable (null after load) → fall back to static
+  const post: BlogPost | undefined =
+    apiPost === 'not-found'
+      ? undefined
+      : apiPost !== null
+        ? apiPost
+        : staticPost
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center py-32 text-muted-foreground text-sm">
+          Loading…
+        </div>
+      </div>
+    )
+  }
 
   if (!post) {
     return (

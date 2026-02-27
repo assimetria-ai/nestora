@@ -373,6 +373,12 @@
       "version": "1.1.0",
       "author": "frederico-junior",
       "changes": "Completed payments-001 Stripe checkout flow: full webhook handler (checkout.session.completed, subscription.updated/deleted, invoice.payment_failed/succeeded), cancel/uncancel endpoints, customer portal, /subscriptions/plans endpoint, stripe_customer_id migration, client stripe.ts API module, BillingPage (live subscription + plan selection), PricingPage (public), /pricing route added."
+    },
+    {
+      "date": "2026-02-26",
+      "version": "1.2.0",
+      "author": "frederico-junior",
+      "changes": "email-001 upgraded to v2.0.0: built pluggable adapter architecture. Resend native REST API adapter (adapters/resend.js) — uses Node 18 fetch, no SDK dependency, supports cc/bcc/reply-to/attachments, verify() health check. SMTP adapter (adapters/smtp.js) — nodemailer wrapper with connection pooling, configurable TLS, works with Resend SMTP relay + SendGrid + Mailgun etc. Email index.js refactored to clean provider-selection logic (resend > smtp > ses > console). Admin API: GET /api/email/verify endpoint added. 29 unit tests — all passing."
     }
   ]
 }

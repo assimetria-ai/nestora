@@ -1,13 +1,8 @@
 // @system — scheduler entry point
-// Tasks run on a cron schedule. Add @custom tasks below.
+// Exports BaseTask and the singleton Scheduler instance.
+// Use scheduler.registerTask(new MyTask()) in @custom/init.js.
 
-const logger = require('../../../lib/@system/Logger')
-const customTasks = require('../@custom')
+const BaseTask = require('./base/BaseTask')
+const scheduler = require('./scheduler')
 
-// Example built-in task runner (extend as needed)
-function startScheduler() {
-  logger.info('[scheduler] started')
-  customTasks.forEach((task) => task.start?.())
-}
-
-module.exports = { startScheduler }
+module.exports = { BaseTask, scheduler }

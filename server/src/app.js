@@ -22,6 +22,10 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(pinoHttp({ logger }))
 }
 
+// Local file uploads — serve before API routes so /uploads/* resolves correctly
+const localUploadsDir = process.env.LOCAL_STORAGE_DIR ?? path.join(__dirname, '..', 'uploads')
+app.use('/uploads', express.static(localUploadsDir))
+
 // Routes
 app.use('/api', systemRoutes)
 app.use('/api', customRoutes)

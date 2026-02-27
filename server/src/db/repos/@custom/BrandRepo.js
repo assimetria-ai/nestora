@@ -1,12 +1,11 @@
-const db = require('../../../lib/@system/PostgreSQL')
+const db = require('../../lib/@system/PostgreSQL')
 
 const BrandRepo = {
-  async findAll({ status, user_id, limit = 50, offset = 0, include_deleted = false } = {}) {
+  async findAll({ status, user_id, limit = 50, offset = 0 } = {}) {
     const conditions = []
     const values = []
     let idx = 1
 
-    if (!include_deleted) conditions.push('deleted_at IS NULL')
     if (status) { conditions.push(`status = $${idx++}`); values.push(status) }
     if (user_id) { conditions.push(`user_id = $${idx++}`); values.push(user_id) }
 
@@ -15,8 +14,7 @@ const BrandRepo = {
 
     return db.any(
       `SELECT id, name, slug, description, logo_url, website_url,
-              primary_color, secondary_color, status, settings, user_id,
-              created_at, updated_at, deleted_at
+              primary_color, secondary_color, status, settings, user_id, created_at, updated_at
        FROM brands
        ${where}
        ORDER BY created_at DESC
@@ -25,12 +23,11 @@ const BrandRepo = {
     )
   },
 
-  async count({ status, user_id, include_deleted = false } = {}) {
+  async count({ status, user_id } = {}) {
     const conditions = []
     const values = []
     let idx = 1
 
-    if (!include_deleted) conditions.push('deleted_at IS NULL')
     if (status) { conditions.push(`status = $${idx++}`); values.push(status) }
     if (user_id) { conditions.push(`user_id = $${idx++}`); values.push(user_id) }
 
@@ -40,15 +37,11 @@ const BrandRepo = {
   },
 
   async findById(id) {
-    return db.oneOrNone('SELECT * FROM brands WHERE id = $1 AND deleted_at IS NULL', [id])
-  },
-
-  async findByIdIncludingDeleted(id) {
     return db.oneOrNone('SELECT * FROM brands WHERE id = $1', [id])
   },
 
   async findBySlug(slug) {
-    return db.oneOrNone('SELECT * FROM brands WHERE slug = $1 AND deleted_at IS NULL', [slug])
+    return db.oneOrNone('SELECT * FROM brands WHERE slug = $1', [slug])
   },
 
   async create({ name, slug, description, logo_url, website_url, primary_color, secondary_color, status = 'active', settings, user_id }) {
@@ -75,7 +68,7 @@ const BrandRepo = {
            status          = COALESCE($9, status),
            settings        = COALESCE($10::jsonb, settings),
            updated_at      = now()
-       WHERE id = $1 AND deleted_at IS NULL
+       WHERE id = $1
        RETURNING *`,
       [id, name ?? null, slug ?? null, description ?? null, logo_url ?? null,
        website_url ?? null, primary_color ?? null, secondary_color ?? null,
@@ -85,58 +78,13 @@ const BrandRepo = {
 
   async updateStatus(id, status) {
     return db.oneOrNone(
-      `UPDATE brands SET status = $2, updated_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING *`,
+      `UPDATE brands SET status = $2, updated_at = now() WHERE id = $1 RETURNING *`,
       [id, status],
     )
   },
 
-  // ── Soft delete ──────────────────────────────────────────────────────────────
-
-  async softDelete(id) {
-    return db.oneOrNone(
-      `UPDATE brands SET deleted_at = now(), updated_at = now()
-       WHERE id = $1 AND deleted_at IS NULL
-       RETURNING *`,
-      [id],
-    )
-  },
-
-  async restore(id) {
-    return db.oneOrNone(
-      `UPDATE brands SET deleted_at = NULL, updated_at = now()
-       WHERE id = $1 AND deleted_at IS NOT NULL
-       RETURNING *`,
-      [id],
-    )
-  },
-
-  async findDeleted({ user_id, limit = 50, offset = 0 } = {}) {
-    const conditions = ['deleted_at IS NOT NULL']
-    const values = []
-    let idx = 1
-
-    if (user_id) { conditions.push(`user_id = $${idx++}`); values.push(user_id) }
-    values.push(limit, offset)
-
-    return db.any(
-      `SELECT id, name, slug, description, logo_url, status, user_id, created_at, updated_at, deleted_at
-       FROM brands
-       WHERE ${conditions.join(' AND ')}
-       ORDER BY deleted_at DESC
-       LIMIT $${idx++} OFFSET $${idx}`,
-      values,
-    )
-  },
-
-  // ── Hard delete (permanent) ──────────────────────────────────────────────────
-
-  async hardDelete(id) {
-    return db.oneOrNone('DELETE FROM brands WHERE id = $1 RETURNING id', [id])
-  },
-
-  /** @deprecated Alias for softDelete — use softDelete() explicitly */
   async delete(id) {
-    return this.softDelete(id)
+    return db.oneOrNone('DELETE FROM brands WHERE id = $1 RETURNING id', [id])
   },
 
   async search(query, { limit = 20 } = {}) {
@@ -147,8 +95,7 @@ const BrandRepo = {
                 plainto_tsquery('english', $1)
               ) AS rank
        FROM brands
-       WHERE deleted_at IS NULL
-         AND to_tsvector('english', COALESCE(name, '') || ' ' || COALESCE(slug, '') || ' ' || COALESCE(description, ''))
+       WHERE to_tsvector('english', COALESCE(name, '') || ' ' || COALESCE(slug, '') || ' ' || COALESCE(description, ''))
              @@ plainto_tsquery('english', $1)
        ORDER BY rank DESC
        LIMIT $2`,

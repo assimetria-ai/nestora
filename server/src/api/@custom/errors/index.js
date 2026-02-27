@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { authenticate, requireAdmin } = require('../../../lib/@system/Helpers/auth')
+const { authenticate, requireAdmin } = require('../../lib/@system/Helpers/auth')
 const ErrorEventRepo = require('../../../db/repos/@custom/ErrorEventRepo')
 
 // GET /api/errors/stats
@@ -83,42 +83,6 @@ router.patch('/errors/:id/status', authenticate, requireAdmin, async (req, res, 
     const event = await ErrorEventRepo.updateStatus(req.params.id, status)
     if (!event) return res.status(404).json({ message: 'Error event not found' })
     res.json({ event })
-  } catch (err) {
-    next(err)
-  }
-})
-
-// DELETE /api/errors/:id — soft delete
-router.delete('/errors/:id', authenticate, requireAdmin, async (req, res, next) => {
-  try {
-    const event = await ErrorEventRepo.findById(req.params.id)
-    if (!event) return res.status(404).json({ message: 'Error event not found' })
-    const deleted = await ErrorEventRepo.softDelete(event.id)
-    res.json({ message: 'Error event deleted', event: deleted })
-  } catch (err) {
-    next(err)
-  }
-})
-
-// GET /api/errors/deleted — list soft-deleted error events (admin only)
-router.get('/errors/deleted', authenticate, requireAdmin, async (req, res, next) => {
-  try {
-    const { limit = '50', offset = '0' } = req.query
-    const events = await ErrorEventRepo.findDeleted({ limit: parseInt(limit), offset: parseInt(offset) })
-    res.json({ events })
-  } catch (err) {
-    next(err)
-  }
-})
-
-// POST /api/errors/:id/restore — restore a soft-deleted error event
-router.post('/errors/:id/restore', authenticate, requireAdmin, async (req, res, next) => {
-  try {
-    const event = await ErrorEventRepo.findByIdIncludingDeleted(req.params.id)
-    if (!event) return res.status(404).json({ message: 'Error event not found' })
-    if (!event.deleted_at) return res.status(400).json({ message: 'Error event is not deleted' })
-    const restored = await ErrorEventRepo.restore(event.id)
-    res.json({ event: restored })
   } catch (err) {
     next(err)
   }

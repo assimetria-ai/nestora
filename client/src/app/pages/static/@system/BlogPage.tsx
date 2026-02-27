@@ -1,6 +1,6 @@
 // @system — Blog index page: post grid + category filter + search
-// @custom — replace BLOG_POSTS with your own content or fetch from a CMS/API
-import { useState, useMemo } from 'react'
+// @custom — posts load from /api/blog (DB-backed via admin panel). BLOG_POSTS is a fallback.
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search,
@@ -262,6 +262,37 @@ That's all it takes. If you have questions, check out our [Help Center](/help) o
   },
 ]
 
+// ── API shape (mirrors DB) ────────────────────────────────────────────────────
+
+interface ApiPost {
+  id: number
+  slug: string
+  title: string
+  excerpt: string | null
+  content: string
+  category: string
+  author: string
+  tags: string[] | null
+  reading_time: number
+  published_at: string | null
+  created_at: string
+}
+
+function apiPostToBlogPost(p: ApiPost): BlogPost {
+  return {
+    id: String(p.id),
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt ?? '',
+    content: p.content,
+    category: p.category,
+    author: p.author,
+    publishedAt: p.published_at ?? p.created_at,
+    readingTime: p.reading_time,
+    tags: p.tags ?? [],
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
@@ -378,10 +409,27 @@ function FeaturedPost({ post }: { post: BlogPost }) {
 export function BlogPage() {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
+  const [apiPosts, setApiPosts] = useState<BlogPost[] | null>(null)
+
+  // Load posts from API; fall back to static seed data if API unavailable
+  useEffect(() => {
+    fetch('/api/blog')
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: { posts: ApiPost[] }) => {
+        if (data.posts && data.posts.length > 0) {
+          setApiPosts(data.posts.map(apiPostToBlogPost))
+        }
+      })
+      .catch(() => {
+        // API unavailable — static fallback will be used
+      })
+  }, [])
+
+  const allPosts = apiPosts ?? BLOG_POSTS
 
   const sorted = useMemo(
-    () => [...BLOG_POSTS].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)),
-    [],
+    () => [...allPosts].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)),
+    [allPosts],
   )
 
   const filtered = useMemo(

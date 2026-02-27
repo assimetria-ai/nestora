@@ -67,6 +67,9 @@ const TwoFactorVerifyPage = lazy(() =>
 )
 
 // App pages (auth required)
+const BlogAdminPage = lazy(() =>
+  import('../../pages/app/@custom/BlogAdminPage').then((m) => ({ default: m.BlogAdminPage }))
+)
 const HomePage = lazy(() =>
   import('../../pages/app/@system/HomePage').then((m) => ({ default: m.HomePage }))
 )
@@ -84,6 +87,9 @@ const BillingPage = lazy(() =>
 )
 const ApiKeysPage = lazy(() =>
   import('../../pages/app/@system/ApiKeysPage').then((m) => ({ default: m.ApiKeysPage }))
+)
+const IntegrationsPage = lazy(() =>
+  import('../../pages/app/@system/IntegrationsPage').then((m) => ({ default: m.IntegrationsPage }))
 )
 
 // @custom routes imported from routes/@custom/index.tsx
@@ -216,6 +222,24 @@ export function AppRoutes() {
           element={
             <ProtectedRoute>
               <ApiKeysPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/app/integrations"
+          element={
+            <ProtectedRoute role="admin">
+              <IntegrationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/app/admin/blog"
+          element={
+            <ProtectedRoute role="admin">
+              <BlogAdminPage />
             </ProtectedRoute>
           }
         />

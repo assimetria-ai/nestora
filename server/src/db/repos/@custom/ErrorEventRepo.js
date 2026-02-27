@@ -1,12 +1,11 @@
-const db = require('../../../lib/@system/PostgreSQL')
+const db = require('../../lib/@system/PostgreSQL')
 
 const ErrorEventRepo = {
-  async findAll({ status, level, environment, limit = 50, offset = 0, include_deleted = false } = {}) {
+  async findAll({ status, level, environment, limit = 50, offset = 0 } = {}) {
     const conditions = []
     const values = []
     let idx = 1
 
-    if (!include_deleted) conditions.push('deleted_at IS NULL')
     if (status) { conditions.push(`status = $${idx++}`); values.push(status) }
     if (level) { conditions.push(`level = $${idx++}`); values.push(level) }
     if (environment) { conditions.push(`environment = $${idx++}`); values.push(environment) }
@@ -16,7 +15,7 @@ const ErrorEventRepo = {
 
     return db.any(
       `SELECT id, fingerprint, title, message, level, platform, environment, release,
-              status, times_seen, first_seen, last_seen, user_id, created_at, deleted_at
+              status, times_seen, first_seen, last_seen, user_id, created_at
        FROM error_events
        ${where}
        ORDER BY last_seen DESC
@@ -25,12 +24,11 @@ const ErrorEventRepo = {
     )
   },
 
-  async count({ status, level, environment, include_deleted = false } = {}) {
+  async count({ status, level, environment } = {}) {
     const conditions = []
     const values = []
     let idx = 1
 
-    if (!include_deleted) conditions.push('deleted_at IS NULL')
     if (status) { conditions.push(`status = $${idx++}`); values.push(status) }
     if (level) { conditions.push(`level = $${idx++}`); values.push(level) }
     if (environment) { conditions.push(`environment = $${idx++}`); values.push(environment) }
@@ -41,16 +39,12 @@ const ErrorEventRepo = {
   },
 
   async findById(id) {
-    return db.oneOrNone('SELECT * FROM error_events WHERE id = $1 AND deleted_at IS NULL', [id])
-  },
-
-  async findByIdIncludingDeleted(id) {
     return db.oneOrNone('SELECT * FROM error_events WHERE id = $1', [id])
   },
 
   async findByFingerprint(fingerprint, environment = 'production') {
     return db.oneOrNone(
-      'SELECT * FROM error_events WHERE fingerprint = $1 AND environment = $2 AND deleted_at IS NULL',
+      'SELECT * FROM error_events WHERE fingerprint = $1 AND environment = $2',
       [fingerprint, environment],
     )
   },
@@ -91,10 +85,8 @@ const ErrorEventRepo = {
   },
 
   async getStats(environment) {
-    const conditions = ['deleted_at IS NULL']
-    const values = []
-    if (environment) { conditions.push('environment = $1'); values.push(environment) }
-    const where = `WHERE ${conditions.join(' AND ')}`
+    const envCondition = environment ? 'WHERE environment = $1' : ''
+    const values = environment ? [environment] : []
     return db.one(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'unresolved') AS unresolved,
@@ -105,39 +97,8 @@ const ErrorEventRepo = {
          COUNT(*) FILTER (WHERE level = 'error') AS errors,
          COUNT(*) FILTER (WHERE level = 'warning') AS warnings,
          COUNT(*) FILTER (WHERE last_seen >= now() - interval '24 hours') AS last_24h
-       FROM error_events ${where}`,
+       FROM error_events ${envCondition}`,
       values,
-    )
-  },
-
-  // ── Soft delete ──────────────────────────────────────────────────────────────
-
-  async softDelete(id) {
-    return db.oneOrNone(
-      `UPDATE error_events SET deleted_at = now(), updated_at = now()
-       WHERE id = $1 AND deleted_at IS NULL
-       RETURNING *`,
-      [id],
-    )
-  },
-
-  async restore(id) {
-    return db.oneOrNone(
-      `UPDATE error_events SET deleted_at = NULL, updated_at = now()
-       WHERE id = $1 AND deleted_at IS NOT NULL
-       RETURNING *`,
-      [id],
-    )
-  },
-
-  async findDeleted({ limit = 50, offset = 0 } = {}) {
-    return db.any(
-      `SELECT id, fingerprint, title, level, environment, status, times_seen, last_seen, created_at, deleted_at
-       FROM error_events
-       WHERE deleted_at IS NOT NULL
-       ORDER BY deleted_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset],
     )
   },
 
@@ -149,8 +110,7 @@ const ErrorEventRepo = {
                 plainto_tsquery('english', $1)
               ) AS rank
        FROM error_events
-       WHERE deleted_at IS NULL
-         AND to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(message, '') || ' ' || COALESCE(fingerprint, ''))
+       WHERE to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(message, '') || ' ' || COALESCE(fingerprint, ''))
              @@ plainto_tsquery('english', $1)
        ORDER BY rank DESC
        LIMIT $2`,

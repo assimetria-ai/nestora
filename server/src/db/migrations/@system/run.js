@@ -53,8 +53,14 @@ function err(msg) {
 
 /**
  * Collect all migration files from MIGRATION_DIRS.
- * Returns an array of { name, filePath } sorted by name ascending.
+ * Returns an array of { name, filePath } in directory order, sorted within each dir.
  * Each `name` is unique across dirs; if duplicates exist the first dir wins.
+ *
+ * IMPORTANT: We do NOT re-sort across directories. @system migrations must always
+ * run before @custom migrations because @custom schemas reference @system tables
+ * (e.g. error_events.sql has a FK to users(id) which is created by @system 001_init).
+ * A global lexicographic sort would cause @custom 001_error_events.js to run before
+ * @system 001_init.js, producing "relation users does not exist" on Railway.
  */
 function discoverMigrations() {
   const seen = new Set()
@@ -65,7 +71,7 @@ function discoverMigrations() {
 
     const files = fs.readdirSync(dir)
       .filter(f => f.endsWith('.js') && !EXCLUDED_FILES.has(f))
-      .sort() // lexicographic order; use numeric prefix like 001_, 002_ for ordering
+      .sort() // lexicographic order within this directory
 
     for (const file of files) {
       if (seen.has(file)) {
@@ -77,8 +83,7 @@ function discoverMigrations() {
     }
   }
 
-  // Final sort in case files came from multiple dirs with interleaved names
-  migrations.sort((a, b) => a.name.localeCompare(b.name))
+  // Do NOT sort across directories — @system must run before @custom.
   return migrations
 }
 

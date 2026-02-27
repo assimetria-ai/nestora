@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { authenticate, requireAdmin } = require('../../../lib/@system/Helpers/auth')
+const { authenticate, requireAdmin } = require('../../lib/@system/Helpers/auth')
 const BrandRepo = require('../../../db/repos/@custom/BrandRepo')
 const CollaboratorRepo = require('../../../db/repos/@custom/CollaboratorRepo')
 const ErrorEventRepo = require('../../../db/repos/@custom/ErrorEventRepo')

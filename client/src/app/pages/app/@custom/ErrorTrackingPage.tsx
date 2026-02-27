@@ -15,7 +15,6 @@ import { Header } from '../../../components/@system/Header/Header'
 import { PageLayout } from '../../../components/@system/layout/PageLayout'
 import { cn } from '../../../lib/@system/utils'
 import { api } from '../../../lib/@system/api'
-import { ErrorTrackingPageSkeleton } from '../../../components/@system/Skeleton/Skeleton'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -371,11 +370,13 @@ export function ErrorTrackingPage() {
         </div>
 
         {/* Table */}
-        {loading && events.length === 0 ? (
-          <ErrorTrackingPageSkeleton />
-        ) : (
         <div className="rounded-lg border border-border overflow-hidden">
-          {events.length === 0 ? (
+          {loading && events.length === 0 ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
+              <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              Loading errors...
+            </div>
+          ) : events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <CheckCircle2 className="h-10 w-10 mb-3 text-green-400" />
               <p className="text-sm font-medium">No issues found</p>
@@ -423,7 +424,6 @@ export function ErrorTrackingPage() {
             </table>
           )}
         </div>
-        )}
 
         {/* Pagination */}
         {total > PAGE_SIZE && (

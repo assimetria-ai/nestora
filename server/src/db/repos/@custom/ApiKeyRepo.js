@@ -1,6 +1,6 @@
 'use strict'
 
-const db = require('../../../lib/@system/PostgreSQL')
+const db = require('../../lib/@system/PostgreSQL')
 
 const ApiKeyRepo = {
   async findByUserId(user_id) {

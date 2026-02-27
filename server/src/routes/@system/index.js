@@ -16,5 +16,8 @@ router.use(require('../../api/@system/oauth'))
 router.use(require('../../api/@system/onboarding'))
 router.use(require('../../api/@system/email'))
 router.use(require('../../api/@system/ai'))
+router.use(require('../../api/@system/integrations'))
+router.use(require('../../api/@system/storage'))
+router.use(require('../../api/@system/search'))
 
 module.exports = router
