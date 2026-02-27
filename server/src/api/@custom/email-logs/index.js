@@ -2,11 +2,24 @@
 
 'use strict'
 
+const crypto = require('crypto')
 const express = require('express')
 const router = express.Router()
 const { authenticate, requireAdmin } = require('../../../lib/@system/Helpers/auth')
 const EmailLogRepo = require('../../../db/repos/@custom/EmailLogRepo')
 const emailTemplates = require('../../../lib/@system/Email/templates')
+
+// Timing-safe string comparison to prevent secret leakage via response-time analysis
+function timingSafeCompare(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA) // consume time to avoid length-based timing leak
+    return false
+  }
+  return crypto.timingSafeEqual(bufA, bufB)
+}
 
 // ── Template preview (admin-only) ──────────────────────────────────────────
 
@@ -124,16 +137,15 @@ router.get('/email-logs/:id', authenticate, requireAdmin, async (req, res, next)
 })
 
 // POST /api/email-logs  — ingest an email send event
-// Can be called internally (no auth) via a shared secret, or via admin auth
+// Requires EMAIL_TRACKING_SECRET env var. Rejects all ingestion if it is not configured.
 router.post('/email-logs', async (req, res, next) => {
   try {
-    // Allow internal calls with a shared secret header, or admin JWT
-    const secret = req.headers['x-email-tracking-secret']
     const expectedSecret = process.env.EMAIL_TRACKING_SECRET
-
-    if (expectedSecret && secret !== expectedSecret) {
-      // Fall back to checking JWT admin auth
-      // We do a manual auth check instead of middleware so we can support both flows
+    if (!expectedSecret) {
+      return res.status(503).json({ message: 'Email tracking not configured' })
+    }
+    const secret = req.headers['x-email-tracking-secret']
+    if (!secret || !timingSafeCompare(secret, expectedSecret)) {
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
