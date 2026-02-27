@@ -1,7 +1,19 @@
+const crypto = require('crypto')
 const express = require('express')
 const router = express.Router()
 const { authenticate, requireAdmin } = require('../../lib/@system/Helpers/auth')
 const ErrorEventRepo = require('../../../db/repos/@custom/ErrorEventRepo')
+
+function timingSafeCompare(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA)
+    return false
+  }
+  return crypto.timingSafeEqual(bufA, bufB)
+}
 
 // GET /api/errors/stats
 router.get('/errors/stats', authenticate, requireAdmin, async (req, res, next) => {
@@ -43,9 +55,12 @@ router.get('/errors/:id', authenticate, requireAdmin, async (req, res, next) => 
 // Uses a shared DSN secret instead of user auth for flexibility
 router.post('/errors', async (req, res, next) => {
   try {
-    const dsn = req.headers['x-sentry-dsn'] ?? req.headers['x-error-dsn']
     const expectedDsn = process.env.ERROR_TRACKING_DSN
-    if (expectedDsn && dsn !== expectedDsn) {
+    if (!expectedDsn) {
+      return res.status(503).json({ message: 'Error tracking not configured' })
+    }
+    const dsn = req.headers['x-sentry-dsn'] ?? req.headers['x-error-dsn']
+    if (!dsn || !timingSafeCompare(dsn, expectedDsn)) {
       return res.status(401).json({ message: 'Invalid DSN' })
     }
 
